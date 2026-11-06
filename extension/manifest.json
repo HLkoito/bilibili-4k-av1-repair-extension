@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Bilibili AV1 Live Repair",
+  "version": "0.3.1",
+  "description": "Repair a specific malformed AV1 metadata pattern on Bilibili Live before decoding. No local server required.",
+  "action": {
+    "default_title": "Open a live room",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://live.bilibili.com/*", "https://www.bilibili.com/blackboard/*"],
+      "js": ["repair-core.js", "mse-hook.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    }
+  ]
+}

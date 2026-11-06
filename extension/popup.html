@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Open a live room</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { width: 380px; margin: 0; padding: 14px; color: #333; background: #fff; font: 13px "Segoe UI", "Microsoft YaHei", sans-serif; }
+    label { display: block; margin-bottom: 8px; }
+    form > div { display: flex; gap: 8px; }
+    input { flex: 1; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid #bbb; border-radius: 4px; font: inherit; }
+    button { height: 32px; padding: 0 12px; border: 1px solid #bbb; border-radius: 4px; background: #f6f6f6; font: inherit; cursor: pointer; }
+    p { margin: 10px 0 0; color: #777; font-size: 12px; line-height: 1.6; }
+    #error { color: #b42318; }
+  </style>
+  <script src="popup.js" defer></script>
+</head>
+<body>
+  <form id="open-room">
+    <label for="url">Bilibili Live room URL</label>
+    <div><input id="url" placeholder="https://live.bilibili.com/ROOM_ID" inputmode="url" required autofocus><button>Open</button></div>
+  </form>
+  <p>You can also visit Bilibili Live directly. Repair runs automatically.</p>
+  <p id="error" role="alert" hidden></p>
+</body>
+</html>

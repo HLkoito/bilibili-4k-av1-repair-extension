@@ -1,0 +1,24 @@
+/* Shared dependency-free fMP4/AV1 repair for Node and browsers. */
+(() => {
+  'use strict';
+  const bytes=v=>v instanceof ArrayBuffer?new Uint8Array(v):new Uint8Array(v.buffer,v.byteOffset,v.byteLength);
+  const view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength),u32=(b,p)=>view(b).getUint32(p),i32=(b,p)=>view(b).getInt32(p);
+  const flags=(b,p)=>(b[p]<<16)|(b[p+1]<<8)|b[p+2],ascii=(b,p,n)=>String.fromCharCode(...b.subarray(p,p+n));
+  function boxes(input,start=0,end=input.byteLength){const b=bytes(input),out=[];for(let p=start;p<end;){if(p+8>end)throw Error('Incomplete MP4 box header');let size=u32(b,p),header=8;if(size===1){if(p+16>end)throw Error('Incomplete extended box');size=Number(view(b).getBigUint64(p+8));header=16;}if(size===0)size=end-p;if(!Number.isSafeInteger(size)||size<header||p+size>end)throw Error('Invalid MP4 box size');out.push({type:ascii(b,p+4,4),start:p,data:p+header,end:p+size});p+=size;}return out;}
+  const children=(b,x)=>boxes(b,x.data,x.end);
+  function readInit(input){const b=bytes(input),tracks=new Map(),defaults=new Map(),moov=boxes(b).find(x=>x.type==='moov');if(!moov)throw Error('Missing moov initialization');
+    for(const trak of children(b,moov).filter(x=>x.type==='trak')){const list=children(b,trak),tkhd=list.find(x=>x.type==='tkhd');if(!tkhd)throw Error('Missing tkhd');const id=u32(b,tkhd.data+(b[tkhd.data]===1?20:12));const mdia=list.find(x=>x.type==='mdia');if(!mdia)continue;const minf=children(b,mdia).find(x=>x.type==='minf');if(!minf)continue;const stbl=children(b,minf).find(x=>x.type==='stbl');if(!stbl)continue;const stsd=children(b,stbl).find(x=>x.type==='stsd');if(stsd)tracks.set(id,boxes(b,stsd.data+8,stsd.end)[0]?.type);}
+    const mvex=children(b,moov).find(x=>x.type==='mvex');if(mvex)for(const x of children(b,mvex).filter(x=>x.type==='trex'))defaults.set(u32(b,x.data+4),u32(b,x.data+16));return{tracks,defaults};}
+  function leb(b,p,end){let n=0;for(let i=0;i<8;i++){if(p>=end)throw Error('Truncated OBU length');const c=b[p++];n+=(c&127)*2**(7*i);if(!(c&128)){if(!Number.isSafeInteger(n))throw Error('OBU size overflow');return[n,p];}}throw Error('Invalid OBU length');}
+  function inspectSample(input,start=0,end=input.byteLength){const b=bytes(input),edits=[];let metadata=0;for(let p=start;p<end;){const head=p,h=b[p++],type=(h>>3)&15;if((h&129)||!(h&2))throw Error('Unsupported AV1 OBU header');if(h&4)p++;let size;[size,p]=leb(b,p,end);const stop=p+size;if(stop>end)throw Error('OBU exceeds sample');if(type===5&&size){metadata++;let subtype,q;[subtype,q]=leb(b,p,stop);if(subtype===4&&b[q]===0x26&&q+17<=stop&&ascii(b,q+1,16)==='TencentStreamSEI'){let tail=stop-1;while(tail>=p&&b[tail]===0)tail--;if(tail>=p&&b[tail]!==128)edits.push({head,payload:p,end:stop,badTail:b[tail]});}}p=stop;}return{edits,metadata};}
+  function repairSegment(input,init,enabled=true){const b=bytes(input),top=boxes(b),edits=[],mdats=top.filter(x=>x.type==='mdat');let samples=0,metadata=0;
+    for(const moof of top.filter(x=>x.type==='moof'))for(const traf of children(b,moof).filter(x=>x.type==='traf')){const list=children(b,traf),tfhd=list.find(x=>x.type==='tfhd');if(!tfhd)throw Error('Missing tfhd');const f=flags(b,tfhd.data+1),track=u32(b,tfhd.data+4);if(init.tracks.get(track)!=='av01')continue;let p=tfhd.data+8,base=moof.start;
+      if(f&1){base=Number(view(b).getBigUint64(p));p+=8;}else if(!(f&0x020000)&&children(b,moof).filter(x=>x.type==='traf')[0].start!==traf.start)throw Error('Unsupported implicit fragment base offset');
+      if(f&2)p+=4;if(f&8)p+=4;let defaultSize=init.defaults.get(track)||0;if(f&16){defaultSize=u32(b,p);p+=4;}let cursor;
+      for(const run of list.filter(x=>x.type==='trun')){const fl=flags(b,run.data+1),count=u32(b,run.data+4);p=run.data+8;if(count>1000000)throw Error('Unreasonable sample count');if(fl&1){cursor=base+i32(b,p);p+=4;}if(fl&4)p+=4;if(cursor===undefined)throw Error('Missing initial trun data offset');for(let i=0;i<count;i++){if(fl&0x100)p+=4;let size=defaultSize;if(fl&0x200){if(p+4>run.end)throw Error('Truncated trun');size=u32(b,p);p+=4;}if(fl&0x400)p+=4;if(fl&0x800)p+=4;if(p>run.end||!size||!mdats.some(x=>cursor>=x.data&&cursor+size<=x.end))throw Error('Invalid sample bounds');const parsed=inspectSample(b,cursor,cursor+size);edits.push(...parsed.edits);metadata+=parsed.metadata;samples++;cursor+=size;}}
+    }
+    if(!enabled||!edits.length)return{output:b,samples,metadata,matched:edits.length,repaired:0,edits};
+    const output=b.slice();for(const e of edits){output[e.head]=(output[e.head]&~0x78)|(15<<3);output.fill(0,e.payload,e.end);if(e.end>e.payload)output[e.end-1]=128;}return{output,samples,metadata,matched:edits.length,repaired:edits.length,edits};
+  }
+  Object.defineProperty(globalThis,'__AV1RepairCore',{value:Object.freeze({bytes,boxes,readInit,inspectSample,repairSegment}),configurable:true});
+})();
