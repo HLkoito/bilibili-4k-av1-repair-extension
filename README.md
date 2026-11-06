@@ -2,7 +2,7 @@
 
 A standalone Chromium extension that works around a specific malformed AV1 metadata pattern found in some Bilibili live streams. It repairs matching metadata immediately before Media Source Extensions (MSE) submits media data for decoding.
 
-**No local server, proxy, FFmpeg installation, startup script, injected toolbar, or player replacement is required.** Open the normal Bilibili Live website and keep its original login session, chat, layout, and playback controls.
+**Automatic repair only: no popup, URL input, injected toolbar, local server, proxy, startup script, or player replacement.** Open the normal Bilibili Live website and keep its original login session, chat, layout, and playback controls.
 
 ## The original failure
 
@@ -27,7 +27,7 @@ This is an unpacked extension, not a Chrome Web Store installation. Loading it o
 
 ## Use
 
-Visit a normal Bilibili Live room. Repair is automatic on matching pages. The optional extension-button popup accepts a room URL and opens it in a new tab.
+Visit a normal Bilibili Live room. Repair is automatic on matching pages. There is no extension popup, URL entry, or manual activation step.
 
 No elements are added to the live page. The extension does not force a codec, change the selected quality, or unlock restricted streams. HEVC, AVC, and AV1 streams without the identified defect do not need this repair.
 
@@ -61,7 +61,7 @@ Image-bearing data, audio, sample sizes, and timestamps remain unchanged. The ma
 
 ## Privacy
 
-No telemetry, cookie reading, background worker, remote code, or extension-initiated network requests. The popup only opens a user-supplied, validated Bilibili Live URL. See [PRIVACY.md](PRIVACY.md).
+No telemetry, cookie reading, background worker, remote code, tab-opening action, or extension-initiated network requests. See [PRIVACY.md](PRIVACY.md).
 
 This public repository and its release ZIP intentionally exclude original live recordings, signed CDN URLs, account identifiers, IP addresses, browser exports, local filesystem paths, and private diagnostic logs. Public tests use synthetic bytes.
 

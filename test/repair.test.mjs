@@ -71,19 +71,13 @@ test('MSE hook handles complete and separate moof/mdat appends and keeps append 
 
 test('manifest is standalone and page scripts do not add UI or make network requests',async()=>{
   const manifest=JSON.parse(await fs.readFile(new URL('extension/manifest.json',root),'utf8'));
-  assert.equal(manifest.version,'0.3.1');assert.equal(manifest.background,undefined);assert.equal(manifest.permissions,undefined);assert.equal(manifest.host_permissions,undefined);
+  assert.equal(manifest.version,'0.3.2');assert.equal(manifest.background,undefined);assert.equal(manifest.permissions,undefined);assert.equal(manifest.host_permissions,undefined);assert.equal(manifest.action,undefined);assert.equal(manifest.options_page,undefined);assert.equal(manifest.options_ui,undefined);
   assert.equal(manifest.content_scripts.length,1);assert.equal(manifest.content_scripts[0].world,'MAIN');assert.equal(manifest.content_scripts[0].all_frames,true);
   for(const name of manifest.content_scripts[0].js)await fs.access(new URL('extension/'+name,root));
   assert.doesNotMatch(source+'\n'+hook,/\bdocument\b|\bfetch\s*\(|XMLHttpRequest|WebSocket|localhost|127\.0\.0\.1|17890|postMessage/);
 });
 
-test('popup opens only valid room URLs, without needing a local service',async()=>{
-  let submit,closed=0;const opened=[];
-  const nodes={'open-room':{addEventListener:(_,fn)=>submit=fn},url:{value:''},error:{hidden:true,textContent:''}};
-  const world=vm.createContext({URL,document:{getElementById:id=>nodes[id]},chrome:{tabs:{create:async ({url})=>opened.push(url)}},window:{close:()=>closed++}});
-  vm.runInContext(await fs.readFile(new URL('extension/popup.js',root),'utf8'),world);
-  nodes.url.value='live.bilibili.com/100';await submit({preventDefault(){}});assert.deepEqual(opened,['https://live.bilibili.com/100']);assert.equal(closed,1);
-  for(const value of ['https://live.bilibili.com.evil.example/100','javascript:alert(1)','https://live.bilibili.com:8443/100']){
-    nodes.url.value=value;await submit({preventDefault(){}});assert.equal(opened.length,1);assert.equal(nodes.error.hidden,false);
-  }
+test('runtime directory contains only repair scripts and manifest, with no UI leftovers',async()=>{
+  assert.deepEqual((await fs.readdir(new URL('extension/',root))).sort(),['manifest.json','mse-hook.js','repair-core.js']);
+  assert.doesNotMatch(source+'\n'+hook,/chrome\.tabs|window\.open|location\.assign|createElement|innerHTML|popup|toolbar/);
 });

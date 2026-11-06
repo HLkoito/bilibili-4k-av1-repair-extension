@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 
 const root=new URL('../',import.meta.url);
 export const packageFiles=[
-  'extension/manifest.json','extension/repair-core.js','extension/mse-hook.js','extension/popup.html','extension/popup.js',
+  'extension/manifest.json','extension/repair-core.js','extension/mse-hook.js',
   'README.md','LICENSE','PRIVACY.md','docs/av1-metadata-failure.md'
 ];
 const manifest=JSON.parse(await fs.readFile(new URL('extension/manifest.json',root),'utf8'));

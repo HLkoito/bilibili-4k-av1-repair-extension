@@ -6,7 +6,7 @@ The extension does not collect or transmit personal information.
 - No cookie-reading, history, storage, native messaging, or unrestricted host permissions.
 - No local HTTP server, proxy, or startup process.
 - Normal website requests, account sessions, chat, and player controls remain the website's responsibility.
-- The optional popup validates the URL entered by the user and opens a normal Bilibili Live tab. It does not save a history of those URLs.
+- No popup, URL-entry interface, browser action, or code that opens tabs.
 - Repair diagnostics are counters and parser messages held only in the player frame's memory. No payload bytes, account identifiers, or stream URLs are included in the diagnostic object.
 
 ## Website access
